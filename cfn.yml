@@ -41,12 +41,10 @@ Resources:
 
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
-    # DependsOn: CloudFrontCachePolicy
     Properties:
       DistributionConfig:
         Aliases: !FindInMap ["Domain", "Names", "All"]
         Enabled: true
-        # HttpVersion:
         PriceClass: PriceClass_100
         Origins:
           - DomainName: "monkslc.com.s3-website.us-east-2.amazonaws.com"
@@ -60,6 +58,7 @@ Resources:
           TargetOriginId: s3-bucket-origin
           ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: !GetAtt CloudFrontCachePolicy.Id
+          Compress: true
         ViewerCertificate:
           AcmCertificateArn: !FindInMap ["Domain", "Certificate", "Arn"]
           SslSupportMethod: sni-only
