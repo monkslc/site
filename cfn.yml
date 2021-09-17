@@ -1,0 +1,83 @@
+Mappings:
+  Domain:
+    Names:
+      Main: "monkslc.com"
+      All:
+        - "monkslc.com"
+        - "www.monkslc.com"
+        - "monkslc.dev"
+        - "www.monkslc.dev"
+
+    Certificate:
+      Arn: "arn:aws:acm:us-east-1:371553061617:certificate/f0e479cb-3acc-4209-abb2-531627c323b4"
+
+Resources:
+  StaticAssetsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !FindInMap ["Domain", "Names", "Main"]
+      AccessControl: "PublicRead"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+
+  StaticAssetsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticAssetsBucket
+      PolicyDocument:
+        Id: MyPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadPolicy
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref StaticAssetsBucket
+                - "/*"
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    # DependsOn: CloudFrontCachePolicy
+    Properties:
+      DistributionConfig:
+        Aliases: !FindInMap ["Domain", "Names", "All"]
+        Enabled: true
+        # HttpVersion:
+        PriceClass: PriceClass_100
+        Origins:
+          - DomainName: "monkslc.com.s3-website.us-east-2.amazonaws.com"
+            Id: s3-bucket-origin
+            CustomOriginConfig:
+              OriginProtocolPolicy: "http-only"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          TargetOriginId: s3-bucket-origin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: !GetAtt CloudFrontCachePolicy.Id
+        ViewerCertificate:
+          AcmCertificateArn: !FindInMap ["Domain", "Certificate", "Arn"]
+          SslSupportMethod: sni-only
+
+  CloudFrontCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: "cf-cache-policy"
+        Comment: "idk what the fuck I'm doing"
+        DefaultTTL: 600
+        MinTTL: 600
+        MaxTTL: 600
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingGzip: false
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
